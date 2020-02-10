@@ -8,13 +8,15 @@ namespace DunGen
     public class MapManager : MonoBehaviour
     {
         // Render specific variables
-        [SerializeField] Sprite wall = null;
-        [SerializeField] GameObject floor;
+        [SerializeField] GameObject wallTile;
+        [SerializeField] GameObject floorTile;
+        [SerializeField] GameObject corridorTile;
 
         // For generic map parameters
         [SerializeField] int mapHeight, mapWidth;
         [SerializeField] int mapType = 0;
         private GameObject[,] mapPositionsFloor;
+        private IMapGen<IMap> generator;
 
         // For BSP generation parameters
         [SerializeField] int minSize, maxSize;
@@ -22,6 +24,10 @@ namespace DunGen
         // Cave params
         // Room and Maze params
 
+        private void Awake()
+        {
+
+        }
         // Start is called before the first frame update
         void Start()
         {
@@ -31,19 +37,28 @@ namespace DunGen
         // Update is called once per frame
         void Update()
         {
-
+            if (Input.GetMouseButton(0))
+            {
+                for (int i = 0; i < mapWidth; i++)
+                {
+                    for (int j = 0; j < mapHeight; j++)
+                    {
+                        if (mapPositionsFloor[i, j] != null)
+                        {
+                            Destroy(mapPositionsFloor[i, j]);
+                        }
+                    }
+                }
+                GenerateMap();
+            }
         }
-
         void GenerateMap()
         {
             if (mapType == 0)
             {
                 //BSP
-                SubDungeon rootDun = new SubDungeon(new Rect(0, 0, mapWidth, mapHeight));
-                BSPMapGen(rootDun, minSize, maxSize);
-                rootDun.CreateRoom();
-                mapPositionsFloor = new GameObject[mapHeight, mapWidth];
-                BSPDraw(rootDun);
+                
+                BSPCorDraw(rootDun);
             } else if (mapType == 1)
             {
                 //Cave
@@ -52,29 +67,7 @@ namespace DunGen
                 //Maze
             }
         }
-        void BSPMapGen(SubDungeon subDungeon, int minSize, int maxSize)
-        {
-            Debug.Log("Splitting sub-dungeon " + subDungeon.debugId + ": " + subDungeon.rect);
-            if (subDungeon.IsLeaf())
-            {
-                // if the sub-dungeon is too large
-                if (subDungeon.rect.width > maxSize
-                  || subDungeon.rect.height > maxSize
-                  || Random.Range(0.0f, 1.0f) > 0.25)
-                {
 
-                    if (subDungeon.Cut(minSize, maxSize, tolerance))
-                    {
-                        Debug.Log("Splitted sub-dungeon " + subDungeon.debugId + " in "
-                          + subDungeon.left.debugId + ": " + subDungeon.left.rect + ", "
-                          + subDungeon.right.debugId + ": " + subDungeon.right.rect);
-
-                        BSPMapGen(subDungeon.left, minSize, maxSize);
-                        BSPMapGen(subDungeon.right, minSize, maxSize);
-                    }
-                }
-            }
-        }
         void BSPDraw(SubDungeon subDungeon)
         {
             if (subDungeon == null)
@@ -87,7 +80,7 @@ namespace DunGen
                 {
                     for (int j = (int)subDungeon.room.y; j < subDungeon.room.yMax; j++)
                     {
-                        GameObject instance = Instantiate(floor, new Vector2(i, j), Quaternion.identity);
+                        GameObject instance = Instantiate(floorTile, new Vector2(i, j), Quaternion.identity) as GameObject;
                         instance.transform.SetParent(transform);
                         mapPositionsFloor[i, j] = instance;
                     }
@@ -97,6 +90,32 @@ namespace DunGen
             {
                 BSPDraw(subDungeon.left);
                 BSPDraw(subDungeon.right);
+            }
+        }
+        void BSPCorDraw(SubDungeon subDungeon)
+        {
+            if (subDungeon == null)
+            {
+                return;
+            }
+
+            BSPCorDraw(subDungeon.left);
+            BSPCorDraw(subDungeon.right);
+
+            foreach (Rect corridor in subDungeon.corridors)
+            {
+                for (int i = (int)corridor.x; i < corridor.xMax; i++)
+                {
+                    for (int j = (int)corridor.y; j < corridor.yMax; j++)
+                    {
+                        if (mapPositionsFloor[i, j] == null)
+                        {
+                            GameObject instance = Instantiate(corridorTile, new Vector2(i, j), Quaternion.identity) as GameObject;
+                            instance.transform.SetParent(transform);
+                            mapPositionsFloor[i, j] = instance;
+                        }
+                    }
+                }
             }
         }
     }

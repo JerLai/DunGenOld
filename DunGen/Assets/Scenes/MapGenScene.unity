@@ -290,5 +290,23 @@ PrefabInstance:
       propertyPath: maxSize
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 8845942164873899461, guid: 98d5a46bae89296408c19991cd7c034a,
+        type: 3}
+      propertyPath: corridor
+      value: 
+      objectReference: {fileID: 1543832814272078676, guid: e8256de87f14a2c47a2a098b7b9bd923,
+        type: 3}
+    - target: {fileID: 8845942164873899461, guid: 98d5a46bae89296408c19991cd7c034a,
+        type: 3}
+      propertyPath: floorTile
+      value: 
+      objectReference: {fileID: 4644129686903215210, guid: 12f217b57c9639344864bac17250428a,
+        type: 3}
+    - target: {fileID: 8845942164873899461, guid: 98d5a46bae89296408c19991cd7c034a,
+        type: 3}
+      propertyPath: corridorTile
+      value: 
+      objectReference: {fileID: 1543832814272078676, guid: e8256de87f14a2c47a2a098b7b9bd923,
+        type: 3}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 98d5a46bae89296408c19991cd7c034a, type: 3}

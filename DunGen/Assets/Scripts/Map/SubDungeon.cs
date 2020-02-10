@@ -1,25 +1,53 @@
 ﻿namespace DunGen
 {
+    using System;
     using System.Collections;
     using System.Collections.Generic;
     using UnityEngine;
 
-    // Used in BSP to split a map into smaller areas until they are the size
-    // of given 
+    /// <summary>
+    /// Acts as the Leaf in BSPTree dungeon generation
+    /// </summary>
     public class SubDungeon
     {
-        public SubDungeon left, right;
-        public Rect rect;
-        public Rect room = new Rect(-1, -1, 0, 0); //(xpos, ypos, width, height)
+        public int subDunWidth
+        {
+            get; private set;
+        }
+        public int subDunHeight
+        {
+            get; private set;
+        }
+        public SubDungeon left
+        {
+            get; private set;
+        }
+        public SubDungeon right
+        {
+            get; private set;
+        }
+        private readonly System.Random _random;
+        private readonly int _x;
+        private readonly int _y;
+        private Rect _room;
+        private Rect _room1;
+        private Rect _room2;
+
+        public Rect room;
         public int debugId;
+        public List<Rect> corridors = new List<Rect>();
 
         private static int debugCounter = 0;
-
+        private static double tolerance = 1.25;
         // Constructor for the SubDungeon class, based on the section of the Map/Dungeon
         // to be used for the split
-        public SubDungeon(Rect mrect)
+        public SubDungeon(int x, int y, int leafWidth, int leafHeight, System.Random random)
         {
-            rect = mrect;
+            subDunWidth = leafWidth;
+            subDunHeight = leafHeight;
+            _x = x;
+            _y = y;
+            _random = random;
             debugId = debugCounter;
             debugCounter++;
         }
@@ -31,76 +59,128 @@
         }
 
         // Splits area considered for the sub dungeon based on given room size limitations
-        public bool Cut(int minSize, int maxSize, double tolerance)
+        public bool Cut(int minSize)
         {
             if (!IsLeaf())
             {
                 return false;
             }
-
-            bool hCut;
-            // If wider than a particular tolerance, split vertically or horizontally
-            if (rect.width / rect.height >= tolerance)
+            // Default value to avoid issues
+            bool hCut = false;
+            // If wider than a particular tolerance (usually 1.25), split vertically or horizontally
+            if ((float)subDunWidth / subDunHeight >= tolerance)
             {
                 hCut = false;
             }
-            else if (rect.height / rect.width >= 1.25)
+            else if ((float)subDunHeight / subDunWidth >= tolerance)
             {
                 hCut = true;
             }
-            else // Assuming the dimensions are roughly the same, split at random
+
+            int max = 0;
+            if (hCut)
             {
-                hCut = Random.Range(0.0f, 1.0f) > 0.5; //0.5 for squares
+                max = subDunHeight - minSize;
+            }
+            else
+            {
+                max = subDunWidth - minSize;
             }
 
-            if (Mathf.Min(rect.height, rect.width)/2 < minSize)
+            // Checks to see if current sub area can be further divided into more, if not then this is a leaf and we are done with this section
+            if (max <= minSize)
             {
                 Debug.Log("Sub-Dungeon " + debugId + " is leaf");
                 return false;
             }
 
+            int cutPoint = _random.Next(minSize, max);
+
+            // Cut current area horizontally on the randomly select cut point, the left child being the upper half, the right being the lower half
+            // Upper half has a height equal to the size of cutPoint, lower has original sub area height minus cutPoint
             if (hCut)
             {
-                // Split so that the resulting sub-dungeons widths are not too small
-                // (since we are splitting horizontally)
-                int split = Random.Range(minSize, (int)(rect.width - minSize));
+                left = new SubDungeon(_x, _y, subDunWidth, cutPoint, _random);
+                right = new SubDungeon(_x, _y + cutPoint, subDunWidth, subDunHeight - cutPoint, _random);
+            }
+            else // Do the above but vice versa
+            {
+                left = new SubDungeon(_x, _y, cutPoint, subDunHeight, _random);
+                right = new SubDungeon(_x + cutPoint, _y, subDunWidth - cutPoint, subDunHeight, _random);
+            }
+            return true;
+        }
 
-                left = new SubDungeon(new Rect(rect.x, rect.y, rect.width, split));
-                right = new SubDungeon(
-                  new Rect(rect.x, rect.y + split, rect.width, rect.height - split));
+        public void CreateRooms<T>(BSPTree<T> generator, int maxSize, int maxRoom, int minRoom) where T: class, IMap, new()
+        {
+            if (!IsLeaf())
+            {
+                if(left != null)
+                {
+                    left.CreateRooms(generator, maxSize, maxRoom, minRoom);
+                }
+                if (right != null)
+                {
+                    right.CreateRooms(generator, maxSize, maxRoom, minRoom);
+                }
+                if (left != null && right != null)
+                {
+                    generator.CreatePath(left.GetRoom(), right.GetRoom());
+                }
             }
             else
             {
-                int split = Random.Range(minSize, (int)(rect.height - minSize));
-
-                left = new SubDungeon(new Rect(rect.x, rect.y, split, rect.height));
-                right = new SubDungeon(
-                  new Rect(rect.x + split, rect.y, rect.width - split, rect.height));
+                int roomWidth = _random.Next(minRoom, Math.Min(maxRoom, subDunWidth - 1));
+                int roomHeight = _random.Next(minRoom, Math.Min(maxRoom, subDunHeight - 1));
+                int rx = _random.Next(_x, _x + (subDunWidth - 1) - roomWidth);
+                int ry = _random.Next(_y, _y + (subDunHeight - 1) - roomHeight);
+                _room = new Rect(rx, ry, roomWidth, roomHeight);
+                Debug.Log("Creating room: " + _room + " in sub-dungeon " + debugId);
+                generator.CreateRoom(_room);
             }
-
-            return true;
         }
-    
-        public void CreateRoom()
+
+        /// <summary>
+        /// retrieves the rooms, as represented by the rectangle for each area
+        /// </summary>
+        /// <returns>the Rect in this subDungeon that is a room</returns>
+        private Rect GetRoom()
         {
-            if (left != null)
+            if (_room != Rect.zero)
             {
-                left.CreateRoom();
+                return _room;
             }
-            if (right != null)
+            else
             {
-                right.CreateRoom();
+                if (left != null)
+                {
+                    _room1 = left.GetRoom();
+                }
+                if (right != null)
+                {
+                    _room2 = right.GetRoom();
+                }
             }
+
             if (IsLeaf())
             {
-                int roomWidth = (int)Random.Range(rect.width / 2, rect.width - 2);
-                int roomHeight = (int)Random.Range(rect.height / 2, rect.height - 2);
-                int roomX = (int)Random.Range(1, rect.width - roomWidth - 1);
-                int roomY = (int)Random.Range(1, rect.height - roomHeight - 1);
-
-                // room position will be absolute in the board, not relative to the sub-dungeon
-                room = new Rect(rect.x + roomX, rect.y + roomY, roomWidth, roomHeight);
-                Debug.Log("Created room " + room + " in sub-dungeon " + debugId + " " + rect);
+                return Rect.zero;
+            }
+            else if (_room2 == Rect.zero)
+            {
+                return _room1;
+            }
+            else if (_room1 == Rect.zero)
+            {
+                return _room2;
+            }
+            else if (Convert.ToBoolean(_random.Next(0, 2)))
+            {
+                return _room1;
+            }
+            else
+            {
+                return _room2;
             }
         }
     }
