@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 namespace DunGen
 {
-
+    using System;
     using UnityEngine;
 
     public class MapManager : MonoBehaviour
@@ -14,9 +14,11 @@ namespace DunGen
 
         // For generic map parameters
         [SerializeField] int mapHeight, mapWidth;
+        [SerializeField] int maxRoom, minRoom;
         [SerializeField] int mapType = 0;
         private GameObject[,] mapPositionsFloor;
-        private IMapGen<IMap> generator;
+        private IMapGen<Map> generator;
+        private IMap map;
 
         // For BSP generation parameters
         [SerializeField] int minSize, maxSize;
@@ -57,8 +59,8 @@ namespace DunGen
             if (mapType == 0)
             {
                 //BSP
-                
-                BSPCorDraw(rootDun);
+                generator = new BSPTree<Map>(mapWidth, mapHeight, maxSize, minSize, maxRoom, minRoom, new System.Random(DateTime.Now.Millisecond));
+                map = Map.Create(generator);
             } else if (mapType == 1)
             {
                 //Cave
@@ -66,8 +68,13 @@ namespace DunGen
             {
                 //Maze
             }
+            DrawMap();
         }
 
+        private void DrawMap()
+        {
+
+        }
         void BSPDraw(SubDungeon subDungeon)
         {
             if (subDungeon == null)
