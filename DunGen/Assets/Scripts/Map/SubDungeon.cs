@@ -29,6 +29,7 @@
         private readonly System.Random _random;
         private readonly int _x;
         private readonly int _y;
+        //TODO: Room object with tiles as well
         private Rect _room;
         private Rect _room1;
         private Rect _room2;

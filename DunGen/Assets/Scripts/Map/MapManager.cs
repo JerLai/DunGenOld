@@ -13,8 +13,8 @@ namespace DunGen
         [SerializeField] GameObject corridorTile;
 
         // For generic map parameters
-        [SerializeField] int mapHeight, mapWidth;
-        [SerializeField] int maxRoom, minRoom;
+        [SerializeField] int mapHeight = 100, mapWidth = 100;
+        [SerializeField] int maxRoom = 20, minRoom = 8;
         [SerializeField] int mapType = 0;
         private GameObject[,] mapPositionsFloor;
         private IMapGen<Map> generator;
@@ -56,6 +56,7 @@ namespace DunGen
         }
         void GenerateMap()
         {
+            mapPositionsFloor = new GameObject[mapWidth, mapHeight];
             if (mapType == 0)
             {
                 //BSP
@@ -73,7 +74,36 @@ namespace DunGen
 
         private void DrawMap()
         {
-
+            for (int x = 0; x < map.Width; x++)
+            {
+                for (int y = 0; y < map.Height; y++)
+                {
+                    switch (map.GetTile(x, y).type)
+                    {
+                        case Tile.Type.Block:
+                            {
+                                GameObject newTile = GameObject.Instantiate(corridorTile, new Vector2(x, y), Quaternion.identity);
+                                newTile.transform.SetParent(transform);
+                                mapPositionsFloor[x, y] = newTile;
+                                break;
+                            }
+                        case Tile.Type.Floor:
+                            {
+                                GameObject newTile = GameObject.Instantiate(floorTile, new Vector2(x, y), Quaternion.identity);
+                                newTile.transform.SetParent(transform);
+                                mapPositionsFloor[x, y] = newTile;
+                                break;
+                            }
+                        case Tile.Type.Hall:
+                            {
+                                GameObject newTile = GameObject.Instantiate(floorTile, new Vector2(x, y), Quaternion.identity);
+                                newTile.transform.SetParent(transform);
+                                mapPositionsFloor[x, y] = newTile;
+                                break;
+                            }
+                    }
+                }
+            }
         }
         void BSPDraw(SubDungeon subDungeon)
         {
