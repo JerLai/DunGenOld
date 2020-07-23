@@ -1,7 +1,3 @@
 # DunGen
 
-For more details about this and a bigger project go to:
-
-https://dungen.onrender.com/
-
-https://github.com/JerLai/dungenweb
+Repo is now defunct, new repo https://github.com/JerLai/DunGen/
